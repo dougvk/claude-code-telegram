@@ -1,0 +1,22 @@
+# Telegram temporary files
+tmp/telegram/
+
+# Environment files
+.env
+.env.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Credentials (just in case)
+*.token
+*.key
+credentials.json
