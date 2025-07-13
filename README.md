@@ -16,9 +16,14 @@ This repository provides Telegram integration for [Claude Code](https://claude.a
   - Extracts last assistant message from transcript
   - Handles various message formats (new/legacy)
   - Automatic message chunking for long responses
+- **Real-time Monitoring**: Monitor Claude Code conversations and send responses to Telegram
+  - Watches for new/modified JSONL files in Claude directory
+  - Extracts assistant messages in real-time
+  - Deduplicates messages to avoid spam
+  - Maintains message history per session
 - **Image Support**: Automatically downloads and processes images from Telegram
 - **Message Splitting**: Handles Telegram's 4096 character limit automatically
-- **Comprehensive Logging**: Both hooks maintain detailed logs for debugging
+- **Comprehensive Logging**: All hooks and scripts maintain detailed logs for debugging
 
 ## Prerequisites
 
@@ -26,6 +31,7 @@ This repository provides Telegram integration for [Claude Code](https://claude.a
 - A Telegram Bot (create one with [@BotFather](https://t.me/botfather))
 - Your Telegram Chat ID (can be a personal chat or channel)
 - `jq` command-line tool installed
+- `inotify-tools` installed (for real-time monitoring)
 
 ## Installation
 
@@ -43,10 +49,11 @@ cp hooks/*.sh ~/.claude/hooks/
 # Copy command
 cp commands/tg.md ~/.claude/commands/
 
-# Copy script
+# Copy scripts
 mkdir -p ~/.claude/scripts
 cp scripts/fetch_tg_updates.sh ~/.claude/scripts/
-chmod +x ~/.claude/scripts/fetch_tg_updates.sh
+cp scripts/monitor_and_post.sh ~/.claude/scripts/
+chmod +x ~/.claude/scripts/*.sh
 ```
 
 3. Make the scripts executable:
@@ -95,6 +102,13 @@ CHAT_ID="your-chat-id-here"
 PREF_LOG_DIR="$HOME/claude_stop_logs"   # Optional: customize log location
 ```
 
+**For `~/.claude/scripts/monitor_and_post.sh`:**
+```bash
+MONITOR_DIR="$HOME/.claude"
+BOT_TOKEN="your-bot-token-here"
+CHAT_ID="your-chat-id-here"
+```
+
 ## Usage
 
 ### Fetching Messages from Telegram
@@ -126,6 +140,24 @@ To enable automatic notifications:
    - Send notifications to Telegram when Claude Code emits them
    - Send Claude's final response when you end a session
 
+### Real-time Monitoring
+
+To monitor Claude Code conversations in real-time and automatically send responses to Telegram:
+
+```bash
+# Run in the background
+nohup ~/.claude/scripts/monitor_and_post.sh > ~/claude_monitor.log 2>&1 &
+
+# Or run in the foreground for debugging
+~/.claude/scripts/monitor_and_post.sh
+```
+
+The monitoring script will:
+- Watch for changes to JSONL files in your Claude directory
+- Extract new assistant messages as they're written
+- Send them to your Telegram chat automatically
+- Prevent duplicate messages from being sent
+
 ## How It Works
 
 ### `/tg` Command Flow
@@ -151,6 +183,14 @@ To enable automatic notifications:
 - Sends the final response to your Telegram chat
 - Maintains detailed logs for troubleshooting
 
+### Real-time Monitor
+- Uses `inotifywait` to watch for file changes
+- Monitors all JSONL files in Claude directory
+- Extracts assistant messages using `jq`
+- Tracks sent messages by file and content hash
+- Handles long messages with automatic chunking
+- Runs continuously until manually stopped
+
 ## Security Notes
 
 - Never commit your bot token or chat ID to version control
@@ -169,6 +209,12 @@ To enable automatic notifications:
 - Check that `tmp/telegram/` directory exists and is writable
 - Ensure your bot has access to receive photos
 - Verify `jq` is installed: `which jq`
+
+### Monitor not working
+- Ensure `inotify-tools` is installed: `sudo apt install inotify-tools` (Ubuntu/Debian) or equivalent
+- Check if the script is running: `ps aux | grep monitor_and_post`
+- Verify bot credentials are correctly set in the script
+- Check monitor logs for errors
 
 ### Hook not triggering
 - Verify hook paths in your Claude Code settings
