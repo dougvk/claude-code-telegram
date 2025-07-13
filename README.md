@@ -9,9 +9,16 @@ This repository provides Telegram integration for [Claude Code](https://claude.a
 
 - **`/tg` Command**: Fetch messages and images from Telegram into Claude Code
 - **Notification Hook**: Forward Claude Code notifications to Telegram
+  - Captures exit plan mode content when permission is needed
+  - Shows context when Claude is waiting for input
+  - Robust error handling and logging
 - **Stop Hook**: Send Claude's final response to Telegram when a session ends
+  - Extracts last assistant message from transcript
+  - Handles various message formats (new/legacy)
+  - Automatic message chunking for long responses
 - **Image Support**: Automatically downloads and processes images from Telegram
 - **Message Splitting**: Handles Telegram's 4096 character limit automatically
+- **Comprehensive Logging**: Both hooks maintain detailed logs for debugging
 
 ## Prerequisites
 
@@ -78,12 +85,14 @@ Edit the hook files to add your credentials:
 ```bash
 BOT_TOKEN="your-bot-token-here"
 CHAT_ID="your-chat-id-here"
+PREF_LOG_DIR="$HOME/claude_notif_logs"  # Optional: customize log location
 ```
 
 **For `~/.claude/hooks/stop_telegram.sh`:**
 ```bash
 BOT_TOKEN="your-bot-token-here"
 CHAT_ID="your-chat-id-here"
+PREF_LOG_DIR="$HOME/claude_stop_logs"   # Optional: customize log location
 ```
 
 ## Usage
@@ -129,14 +138,18 @@ To enable automatic notifications:
 ### Notification Hook
 - Receives JSON payload from Claude Code
 - Extracts the `.message` field
-- Sends it to your Telegram chat
-- Handles long messages by splitting them
+- When Claude needs permission (exit plan mode), includes the plan details
+- When Claude is waiting for input, shows context snippet
+- Sends messages to your Telegram chat with automatic chunking
+- Logs all operations to `PREF_LOG_DIR` for debugging
 
 ### Stop Hook
 - Triggered when Claude Code session ends
 - Reads the transcript file
-- Extracts Claude's last response
-- Sends it to your Telegram chat
+- Extracts Claude's last response (supports multiple formats)
+- Handles escaped newlines and formatting
+- Sends the final response to your Telegram chat
+- Maintains detailed logs for troubleshooting
 
 ## Security Notes
 
@@ -161,6 +174,18 @@ To enable automatic notifications:
 - Verify hook paths in your Claude Code settings
 - Check script permissions: `ls -la ~/.claude/hooks/`
 - Look for errors in Claude Code logs
+- Check hook logs in your configured `PREF_LOG_DIR` or `/tmp/claude_*_*.log`
+
+### Debugging with Logs
+Both hooks create detailed logs for troubleshooting:
+- Notification logs: `~/claude_notif_logs/notif_hook_*.log` (or `/tmp/claude_notif_*.log`)
+- Stop logs: `~/claude_stop_logs/stop_hook_*.log` (or `/tmp/claude_stop_*.log`)
+
+These logs include:
+- Full payloads received
+- Telegram API responses
+- Message extraction details
+- Any errors encountered
 
 ## Example Workflow
 
